@@ -9,13 +9,28 @@
   },
   "resources": [
     {
-      "type": "Microsoft.Network/virtualNetworks",
+      "type": "Microsoft.Network/publicIPAddresses",
       "apiVersion": "2020-06-01",
-      "name": "myVnet",
+      "name": "myPublicIP",
       "location": "[parameters('location')]",
+      "properties": { "publicIPAllocationMethod": "Dynamic" }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2020-06-01",
+      "name": "myNic",
+      "location": "[parameters('location')]",
+      "dependsOn": ["myPublicIP"],
       "properties": {
-        "addressSpace": { "addressPrefixes": ["10.0.0.0/16"] },
-        "subnets": [{ "name": "default", "properties": { "addressPrefix": "10.0.0.0/24" } }]
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": { "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets','myVnet','default')]" },
+              "publicIPAddress": { "id": "[resourceId('Microsoft.Network/publicIPAddresses','myPublicIP')]" }
+            }
+          }
+        ]
       }
     },
     {
@@ -23,7 +38,7 @@
       "apiVersion": "2021-07-01",
       "name": "[parameters('vmName')]",
       "location": "[parameters('location')]",
-      "dependsOn": ["myVnet"],
+      "dependsOn": ["myNic"],
       "properties": {
         "hardwareProfile": { "vmSize": "Standard_B1s" },
         "osProfile": {
@@ -44,5 +59,11 @@
         }
       }
     }
-  ]
+  ],
+  "outputs": {
+    "vmPublicIP": {
+      "type": "string",
+      "value": "[reference('myPublicIP').ipAddress]"
+    }
+  }
 }
